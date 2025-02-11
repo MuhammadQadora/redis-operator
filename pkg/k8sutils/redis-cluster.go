@@ -119,7 +119,9 @@ func generateRedisClusterContainerParams(ctx context.Context, cl kubernetes.Inte
 		Resources:       resources,
 		SecurityContext: securityContext,
 		Port:            cr.Spec.Port,
+		HostPort:        cr.Spec.HostPort,
 	}
+
 	if cr.Spec.EnvVars != nil {
 		containerProp.EnvVars = cr.Spec.EnvVars
 	}

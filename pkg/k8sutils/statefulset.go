@@ -443,11 +443,12 @@ func generateContainerDef(name string, containerParams containerParameters, clus
 
 	log.Log.Info("this is ", "here", containerParams.Port)
 	log.Log.Info("this is ", "here", containerParams.HostPort)
-	if containerParams.Port != nil {
+
+	if containerParams.HostPort != nil {
 		containerDefinition[0].Ports = []corev1.ContainerPort{
 			{
 				HostPort:      int32(*containerParams.HostPort),
-				ContainerPort: int32(*ptr.To(redisPort)),
+				ContainerPort: int32(*containerParams.Port),
 			},
 		}
 	}
