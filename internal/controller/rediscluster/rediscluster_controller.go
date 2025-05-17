@@ -123,17 +123,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	err = k8sutils.CreateRedisLeader(ctx, instance, r.K8sClient)
-	if err != nil {
-		return intctrlutil.RequeueWithError(ctx, err, "")
-	}
 	if leaderReplicas != 0 {
 		err = k8sutils.CreateRedisLeaderService(ctx, instance, r.K8sClient)
 		if err != nil {
 			return intctrlutil.RequeueWithError(ctx, err, "")
 		}
 	}
-
+	err = k8sutils.CreateRedisLeader(ctx, instance, r.K8sClient)
+	if err != nil {
+		return intctrlutil.RequeueWithError(ctx, err, "")
+	}
 	err = k8sutils.ReconcileRedisPodDisruptionBudget(ctx, instance, "leader", instance.Spec.RedisLeader.PodDisruptionBudget, r.K8sClient)
 	if err != nil {
 		return intctrlutil.RequeueWithError(ctx, err, "")
@@ -164,13 +163,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return intctrlutil.RequeueWithError(ctx, err, "")
 		}
 	}
-	// Update the current replica count in the status
+
 	if err := r.updateCurrentReplicaCount(ctx, instance); err != nil {
 		return intctrlutil.RequeueWithError(ctx, err, "failed to update replica count")
 	}
 
-	// Replace degraded state handling with simple return since StatefulSet changes trigger reconciliation
+	// Check if StatefulSets are ready
 	if !(r.IsStatefulSetReady(ctx, instance.Namespace, instance.Name+"-leader") && r.IsStatefulSetReady(ctx, instance.Namespace, instance.Name+"-follower")) {
+		// Update status to failed state
+		err = k8sutils.UpdateRedisClusterStatus(ctx, instance,
+			status.RedisClusterFailed,
+			"StatefulSet not ready",
+			instance.Status.ReadyLeaderReplicas,
+			instance.Status.ReadyFollowerReplicas,
+			r.Dk8sClient)
+		if err != nil {
+			return intctrlutil.RequeueWithError(ctx, err, "")
+		}
+		// Return without requeuing since StatefulSet changes will trigger reconciliation
 		return intctrlutil.Reconciled()
 	}
 
