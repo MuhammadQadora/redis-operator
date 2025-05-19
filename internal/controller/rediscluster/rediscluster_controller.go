@@ -315,7 +315,7 @@ func (r *Reconciler) updateCurrentReplicaCount(ctx context.Context, instance *re
 			ctx,
 			instance,
 			status.RedisClusterBootstrap,
-			"RedisCluster is bootstrapping",
+			status.BootstrapClusterReason,
 			currentLeaderReplicas,
 			currentFollowerReplicas,
 			r.Dk8sClient,
